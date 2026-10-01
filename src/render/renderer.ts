@@ -173,12 +173,37 @@ export class Renderer {
   private redTex = radialTexture('rgba(255,40,30,0.55)', 'rgba(255,40,30,0.15)');
   private redRingTex: THREE.Texture;
   private budget = 0;
+  private maxPR = 1;
+  private slowT = 0;
+  private fastT = 0;
+
+  /** adaptive resolution: drop pixel ratio when frames are slow, recover when there is headroom */
+  adapt(frameDt: number) {
+    const pr = this.renderer.getPixelRatio();
+    if (frameDt > 1 / 45) {
+      this.slowT += frameDt;
+      this.fastT = 0;
+    } else if (frameDt < 1 / 58) {
+      this.fastT += frameDt;
+      this.slowT = Math.max(0, this.slowT - frameDt * 0.5);
+    }
+    if (this.slowT > 1.5 && pr > 1) {
+      this.renderer.setPixelRatio(Math.max(1, pr - 0.25));
+      this.renderer.setSize(this.w, this.h, false);
+      this.slowT = 0;
+    } else if (this.fastT > 6 && pr < this.maxPR) {
+      this.renderer.setPixelRatio(Math.min(this.maxPR, pr + 0.25));
+      this.renderer.setSize(this.w, this.h, false);
+      this.fastT = 0;
+    }
+  }
 
   constructor(container: HTMLElement) {
     this.container = container;
     const mobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
     this.renderer = new THREE.WebGLRenderer({ antialias: !mobile, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.75 : 2));
+    this.maxPR = Math.min(window.devicePixelRatio || 1, mobile ? 1.75 : 2);
+    this.renderer.setPixelRatio(this.maxPR);
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     container.appendChild(this.renderer.domElement);
     this.camera = new THREE.PerspectiveCamera(50, 0.5, 0.5, 260);

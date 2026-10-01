@@ -318,6 +318,7 @@ class Game {
     let dt = (now - this.last) / 1000;
     this.last = now;
     if (dt > 0.1) dt = 0.1;
+    if (this.mode === 'play' && !document.hidden) this.renderer.adapt(dt);
     this.fpsAcc += dt;
     this.fpsFrames++;
     if (this.fpsAcc > 1) {
@@ -501,6 +502,25 @@ function boot() {
     speed: (s: number) => (game.speed = s),
     world: () => game.world,
     save: () => game.save,
+    /** fast-forward the running level with the autoplayer (tests only) */
+    ff: (sec: number, opts: { skill?: number; frost?: boolean } = {}) => {
+      const w = game.world;
+      const bot = new Bot(opts.skill ?? 1);
+      const step = 1 / 60;
+      for (let i = 0; i < sec * 60 && w.state === 'play'; i++) {
+        const d = bot.update(w, step);
+        w.setTarget(d.x);
+        if (d.frost && opts.frost !== false) w.castFrost();
+        w.update(step);
+        w.events.length = 0;
+      }
+    },
+    /** force the army size (tests only) */
+    setArmy: (n: number) => {
+      const w = game.world;
+      if (n > w.N) w.addSoldiers(n - w.N, w.ax, F.front);
+      else w.killSoldiers(w.N - n, w.ax, F.front, 'trap');
+    },
     state: () => ({ mode: game.mode, state: game.world.state, t: game.world.t, N: game.world.N, remaining: game.world.remaining(), fps: game.fps }),
   };
 }
