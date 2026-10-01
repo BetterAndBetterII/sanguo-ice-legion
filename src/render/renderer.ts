@@ -1082,7 +1082,10 @@ export class Renderer {
       if (frozen) {
         mat.color.lerp(new THREE.Color(0xbfefff), 0.55);
         mat.emissive.setRGB(0.05, 0.18, 0.28);
-      } else if (b.flash > 0) mat.emissive.setRGB(0.55, 0.45, 0.45);
+      } else if (b.flash > 0) {
+        const k = Math.min(1, b.flash / 0.07);
+        mat.emissive.setRGB(0.5 * k, 0.4 * k, 0.4 * k);
+      }
       else mat.emissive.setRGB(0, 0, 0);
     }
     if (b.kind === 'fire' && !frozen && Math.random() < dt * 20) {

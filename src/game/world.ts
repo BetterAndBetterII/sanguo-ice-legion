@@ -768,7 +768,7 @@ export class World {
         const b = this.bosses[ref];
         const dmg = a.dmg * (b.frozen > 0 ? 1.5 : 1);
         b.hp -= dmg;
-        b.flash = 0.07;
+        if (b.flash < -0.09) b.flash = 0.07; // blink rather than staying white under sustained fire
         b.dmgAcc += dmg;
         if (b.hp <= 0) this.killBoss(b);
         return true;
@@ -959,7 +959,7 @@ export class World {
   private updateBosses(dt: number) {
     for (let i = this.bosses.length - 1; i >= 0; i--) {
       const b = this.bosses[i];
-      if (b.flash > 0) b.flash -= dt;
+      if (b.flash > -1) b.flash -= dt;
       b.dmgT -= dt;
       if (b.dmgAcc > 0 && b.dmgT <= 0) {
         this.events.push({ k: 'bhit', id: b.id, dmg: Math.round(b.dmgAcc), x: b.x, z: b.z });
