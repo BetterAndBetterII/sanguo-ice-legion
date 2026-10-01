@@ -113,7 +113,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'gate', left: '-30', right: 'x2', wait: 14 },
       { type: 'wave', enemy: 'inf', count: 150, rate: 9, wait: 4 },
     ],
-    stars: [250, 550],
+    stars: [300, 700],
     reward: 150,
   },
   {
@@ -131,7 +131,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'wave', enemy: 'cav', count: 50, rate: 3.5, wait: 6 },
       { type: 'wave', enemy: 'inf', count: 150, rate: 8, wait: 2 },
     ],
-    stars: [150, 320],
+    stars: [200, 450],
     reward: 170,
   },
   {
@@ -148,7 +148,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'boss', kind: 'hammer', hp: 500, name: '锤将·贰', clear: 1, wait: 2 },
       { type: 'boss', kind: 'hammer', hp: 600, name: '锤将·叁', clear: 1, wait: 2 },
     ],
-    stars: [80, 200],
+    stars: [120, 400],
     reward: 220,
   },
   {
@@ -186,7 +186,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'wave', enemy: 'ram', count: 6, rate: 0.3, wait: 6 },
       { type: 'wave', enemy: 'inf', count: 400, rate: 12, wait: 2 },
     ],
-    stars: [180, 400],
+    stars: [250, 600],
     reward: 280,
   },
   {
@@ -225,7 +225,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'wave', enemy: 'inf', count: 500, rate: 14, wait: 4 },
       { type: 'wave', enemy: 'ram', count: 5, rate: 0.3, wait: 2 },
     ],
-    stars: [250, 550],
+    stars: [300, 800],
     reward: 360,
   },
   {
@@ -264,7 +264,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'gate', left: 'x2', right: '+100', shoot: 2, wait: 10 },
       { type: 'wave', enemy: 'cav', count: 250, rate: 6, wait: 4 },
     ],
-    stars: [600, 1300],
+    stars: [700, 1800],
     reward: 450,
   },
   {
@@ -285,7 +285,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'wave', enemy: 'cav', count: 200, rate: 5, wait: 6 },
       { type: 'wave', enemy: 'archer', count: 120, rate: 4, wait: 2 },
     ],
-    stars: [700, 1800],
+    stars: [800, 2000],
     reward: 520,
   },
   {
@@ -306,7 +306,7 @@ export const LEVELS: LevelDef[] = [
       { type: 'wave', enemy: 'inf', count: 600, rate: 12, wait: 4 },
       { type: 'wave', enemy: 'cav', count: 200, rate: 5, wait: 4 },
     ],
-    stars: [700, 1600],
+    stars: [800, 1800],
     reward: 800,
   },
 ];
