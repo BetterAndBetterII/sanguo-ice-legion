@@ -137,6 +137,7 @@ export interface Lane {
 export interface GateHalf {
   op: 'add' | 'mul';
   v: number;
+  max: number; // shooting can raise an additive half up to this value
   hits: number;
   flash: number;
 }
@@ -189,6 +190,7 @@ interface Spawner {
   rate: number;
   acc: number;
   width: number;
+  hp: number;
 }
 
 export interface WorldOpts {
@@ -480,6 +482,7 @@ export class World {
       if (this.tlIdx >= this.tl.length) {
         if (this.level.endless) {
           this.tl.push(...endlessChunk(this.chunk++));
+          if (this.chunk > 1) this.events.push({ k: 'msg', text: `第 ${this.chunk} 波 · 敌军更强了！` });
           this.recountFuture();
         } else return;
       }
@@ -502,11 +505,11 @@ export class World {
   private fireEvent(e: LevelEvent) {
     switch (e.type) {
       case 'wave':
-        if (e.pre) this.placeBlock(e.enemy, e.count);
-        else this.spawners.push({ type: e.enemy, left: e.count, rate: e.rate ?? 8, acc: 0, width: e.width ?? F.centerHalf - 0.5 });
+        if (e.pre) this.placeBlock(e.enemy, e.count, (e.hp ?? 1) * this.dynHp());
+        else this.spawners.push({ type: e.enemy, left: e.count, rate: e.rate ?? 8, acc: 0, width: e.width ?? F.centerHalf - 0.5, hp: e.hp ?? 1 });
         break;
       case 'boss':
-        this.spawnBoss(e.kind, e.hp, e.name ?? BOSS[e.kind].title);
+        this.spawnBoss(e.kind, Math.round(e.hp * Math.pow(this.dynHp(), 1.2)), e.name ?? BOSS[e.kind].title);
         break;
       case 'lane': {
         const i = e.side === 'L' ? 0 : 1;
@@ -516,7 +519,11 @@ export class World {
         break;
       }
       case 'gate': {
-        const mk = (s: string): GateHalf => (s[0] === 'x' ? { op: 'mul', v: Number(s.slice(1)), hits: 0, flash: 0 } : { op: 'add', v: Number(s), hits: 0, flash: 0 });
+        const mk = (s: string): GateHalf => {
+          if (s[0] === 'x') return { op: 'mul', v: Number(s.slice(1)), max: 0, hits: 0, flash: 0 };
+          const v = Number(s);
+          return { op: 'add', v, max: v + 2 * Math.max(50, Math.abs(v)), hits: 0, flash: 0 };
+        };
         this.gates.push({ id: this.nextId++, z: F.dividerEndZ - 1, age: 0, shoot: e.shoot ?? 0, halves: [mk(e.left), mk(e.right)], passed: -1, fade: 0 });
         break;
       }
@@ -526,12 +533,13 @@ export class World {
     }
   }
 
-  private makeEnemy(type: EType, x: number, z: number, state: ES): Enemy {
+  private makeEnemy(type: EType, x: number, z: number, state: ES, hpMul = 1): Enemy {
     const d = ENEMY[type];
-    return { type, x, z, hp: d.hp, maxHp: d.hp, r: d.r, speed: d.speed * (0.9 + this.rand() * 0.2), state, t: 1 + this.rand() * 2, how: 'ice', flash: 0, phase: this.rand() * 6.28 };
+    const hp = d.hp * hpMul;
+    return { type, x, z, hp, maxHp: hp, r: d.r, speed: d.speed * (0.9 + this.rand() * 0.2), state, t: 1 + this.rand() * 2, how: 'ice', flash: 0, phase: this.rand() * 6.28 };
   }
 
-  private placeBlock(type: EType, count: number) {
+  private placeBlock(type: EType, count: number, hpMul: number) {
     const w = F.centerHalf - 0.35;
     const sp = type === 'inf' || type === 'archer' ? 0.6 : 0.78;
     const perRow = Math.floor((2 * w) / sp);
@@ -540,11 +548,17 @@ export class World {
       const col = i % perRow;
       const x = -w + (col + 0.5) * ((2 * w) / perRow) + (this.rand() - 0.5) * 0.2 + (row % 2 ? 0.15 : -0.15);
       const z = F.holdZ - 0.4 - row * sp * 0.92 + (this.rand() - 0.5) * 0.2;
-      this.enemies.push(this.makeEnemy(type, x, z, type === 'cav' || type === 'ram' ? ES.Charge : ES.March));
+      this.enemies.push(this.makeEnemy(type, x, z, type === 'cav' || type === 'ram' ? ES.Charge : ES.March, hpMul));
     }
   }
 
+  /** endless mode: enemies scale with the size of the player's army so a snowball never trivialises it */
+  private dynHp(): number {
+    return this.level.endless ? Math.pow(Math.max(1, this.N / 200), 0.9) : 1;
+  }
+
   private updateSpawners(dt: number) {
+    const dyn = this.dynHp();
     for (let i = this.spawners.length - 1; i >= 0; i--) {
       const s = this.spawners[i];
       s.acc += dt * s.rate;
@@ -553,7 +567,7 @@ export class World {
         s.left--;
         const x = (this.rand() * 2 - 1) * s.width;
         const z = F.spawnZ - this.rand() * 4;
-        this.enemies.push(this.makeEnemy(s.type, x, z, s.type === 'cav' || s.type === 'ram' ? ES.Charge : ES.March));
+        this.enemies.push(this.makeEnemy(s.type, x, z, s.type === 'cav' || s.type === 'ram' ? ES.Charge : ES.March, s.hp * dyn));
       }
       if (s.left <= 0) this.spawners.splice(i, 1);
     }
@@ -741,9 +755,9 @@ export class World {
         const g = this.gates[ref];
         const h = g.halves[a.x < 0 ? 0 : 1];
         h.flash = 0.08;
-        if (h.op === 'add') {
+        if (h.op === 'add' && h.v < h.max) {
           h.hits += Math.min(a.dmg, 3);
-          while (h.hits >= g.shoot) {
+          while (h.hits >= g.shoot && h.v < h.max) {
             h.hits -= g.shoot;
             h.v += 1;
           }
@@ -801,7 +815,8 @@ export class World {
     const Rx = this.Rx;
     const Rz = this.Rz;
     // horde release
-    const rate = Math.min(this.level.charge.max, this.level.charge.base + this.level.charge.ramp * this.t);
+    const cmax = this.level.charge.max + (this.level.endless ? this.chunk * 5 : 0);
+    const rate = Math.min(cmax, this.level.charge.base + this.level.charge.ramp * this.t);
     this.releaseAcc += dt * rate;
     let marchers = -1;
     if (this.releaseAcc >= 1) {
@@ -927,7 +942,7 @@ export class World {
           const def = ENEMY[e.type];
           this.events.push({ k: 'edie', x: e.x, z: e.z, how: 'contact', type: e.type });
           if (e.type === 'ram') this.events.push({ k: 'ramHit', x: e.x, z: e.z, killed: Math.max(def.contact, Math.round(this.N * 0.06)) });
-          const n = e.type === 'ram' ? Math.max(def.contact, Math.round(this.N * 0.06)) : def.contact;
+          const n = e.type === 'ram' ? Math.max(def.contact, Math.round(this.N * 0.06)) : Math.round(def.contact * Math.sqrt(e.maxHp / def.hp));
           this.killSoldiers(n, e.x, e.z, e.type === 'ram' ? 'slam' : 'contact');
           this.kills++;
           e.state = ES.Removed;
@@ -961,7 +976,7 @@ export class World {
       if (!b.enraged && b.hp < b.maxHp * 0.5 && b.kind === 'warlord') {
         b.enraged = true;
         this.events.push({ k: 'summon', id: b.id });
-        this.spawners.push({ type: 'cav', left: 30, rate: 6, acc: 0, width: 4 });
+        this.spawners.push({ type: 'cav', left: 30, rate: 6, acc: 0, width: 4, hp: 1 });
       }
       if (b.frozen > 0) {
         b.frozen -= dt;
@@ -1068,7 +1083,7 @@ export class World {
       b.state = 'windup';
       b.t = 0.6;
     } else if (kind === 'summon') {
-      this.spawners.push({ type: 'cav', left: 16, rate: 8, acc: 0, width: 4 });
+      this.spawners.push({ type: 'cav', left: 16, rate: 8, acc: 0, width: 4, hp: 1 });
       this.events.push({ k: 'summon', id: b.id });
       b.state = 'recover';
       b.t = 1.2;

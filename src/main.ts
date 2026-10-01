@@ -33,6 +33,19 @@ async function loadFonts() {
   }
 }
 
+let lastBuzz = 0;
+/** light haptic feedback on supporting phones (silent when muted) */
+function buzz(ms: number, muted: boolean) {
+  const now = performance.now();
+  if (muted || now - lastBuzz < 120 || !('vibrate' in navigator)) return;
+  lastBuzz = now;
+  try {
+    navigator.vibrate(ms);
+  } catch {
+    /* ignore */
+  }
+}
+
 class Game {
   save: SaveData = loadSave();
   renderer: Renderer;
@@ -371,6 +384,7 @@ class Game {
       if (w.state === 'lose') {
         this.ui.setGray(true);
         sound.lose();
+        buzz(160, this.save.muted);
       } else {
         this.ui.toast('大捷！', 'big win');
       }
@@ -413,6 +427,7 @@ class Game {
         }
         case 'gate': {
           sound.gate(ev.good);
+          buzz(ev.good ? 15 : 40, this.save.muted);
           const p = r.project(w.ax, 3, F.front);
           ui.float(p.x, p.y, ev.text, ev.good ? 'gold huge' : 'red huge');
           break;
@@ -436,6 +451,7 @@ class Game {
         }
         case 'bdie':
           sound.bossDie();
+          buzz(80, this.save.muted);
           this.slowmo = 0.9;
           ui.toast('斩将！', 'gold big');
           if (!w.bosses.some((b) => b.state !== 'dead')) sound.setMusic('battle');
@@ -450,6 +466,7 @@ class Game {
           else if (ev.k === 'boom') sound.boom();
           else sound.dash();
           if (ev.killed > 0) {
+            buzz(35, this.save.muted);
             const x = ev.x;
             const z = ev.k === 'dash' ? F.front + 1 : ev.z;
             const p = r.project(x, 2, z);
@@ -470,8 +487,13 @@ class Game {
           sound.frostReady();
           ui.frostPulse();
           break;
+        case 'msg':
+          ui.toast(ev.text, 'red big');
+          sound.roar();
+          break;
         case 'ramHit': {
           sound.ramHit();
+          buzz(50, this.save.muted);
           const p = r.project(ev.x, 2, ev.z);
           ui.float(p.x, p.y, '-' + ev.killed, 'red big');
           break;

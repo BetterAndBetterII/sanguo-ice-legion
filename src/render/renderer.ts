@@ -925,7 +925,8 @@ export class Renderer {
         const half = g.halves[h];
         const txt = gateText(half);
         const good = half.op === 'mul' ? half.v >= 1 : half.v >= 0;
-        v.halves[h].tex.set(txt, good ? (g.shoot ? 'good|s' : 'good') : 'bad');
+        const shootable = g.shoot > 0 && half.op === 'add' && half.v < half.max;
+        v.halves[h].tex.set(txt, good ? (shootable ? 'good|s' : 'good') : shootable ? 'bad|s' : 'bad');
         const mesh = v.halves[h].mesh;
         const fl = half.flash > 0 ? 1.08 : 1;
         if (g.passed >= 0) {

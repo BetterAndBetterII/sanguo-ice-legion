@@ -241,7 +241,8 @@ export function drawBigNumber(g: CanvasRenderingContext2D, text: string, w: numb
 }
 
 export function drawGate(g: CanvasRenderingContext2D, text: string, w: number, h: number, extra: string) {
-  const good = extra !== 'bad';
+  const good = !extra.startsWith('bad');
+  const shootable = extra.endsWith('|s');
   const grd = g.createLinearGradient(0, 0, 0, h);
   if (good) {
     grd.addColorStop(0, 'rgba(120,200,255,0.85)');
@@ -265,6 +266,25 @@ export function drawGate(g: CanvasRenderingContext2D, text: string, w: number, h
   g.strokeText(text, w / 2, h * 0.55);
   g.fillStyle = '#fff';
   g.fillText(text, w / 2, h * 0.55);
+  if (shootable) {
+    // crosshair badge: this value can be raised by shooting it
+    const r = h * 0.16;
+    const cx = w - r - 14;
+    const cy = r + 12;
+    g.fillStyle = 'rgba(255,214,90,0.95)';
+    g.beginPath();
+    g.arc(cx, cy, r + 5, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = '#6a3d00';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.arc(cx, cy, r * 0.62, 0, Math.PI * 2);
+    g.moveTo(cx - r, cy);
+    g.lineTo(cx + r, cy);
+    g.moveTo(cx, cy - r);
+    g.lineTo(cx, cy + r);
+    g.stroke();
+  }
 }
 
 export function bannerTexture(): THREE.CanvasTexture {

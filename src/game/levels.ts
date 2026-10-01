@@ -10,7 +10,7 @@ export interface LaneDef {
 }
 
 export type LevelEvent =
-  | { type: 'wave'; enemy: EType; count: number; rate?: number; pre?: boolean; width?: number; wait?: number; clear?: number }
+  | { type: 'wave'; enemy: EType; count: number; rate?: number; pre?: boolean; width?: number; hp?: number; wait?: number; clear?: number }
   | { type: 'boss'; kind: BossKind; hp: number; name?: string; wait?: number; clear?: number }
   | { type: 'lane'; side: 'L' | 'R'; lane: LaneDef | null; wait?: number; clear?: number }
   | { type: 'gate'; left: string; right: string; shoot?: number; wait?: number; clear?: number }
@@ -329,15 +329,22 @@ export const ENDLESS: LevelDef = {
 export function endlessChunk(k: number): LevelEvent[] {
   const ev: LevelEvent[] = [];
   const s = 1 + k * 0.35;
-  ev.push({ type: 'wave', enemy: 'inf', count: Math.round(180 * s), rate: 8 + k, wait: k === 0 ? 0 : 2, clear: k === 0 ? undefined : 60 });
-  if (k >= 1) ev.push({ type: 'wave', enemy: k % 2 ? 'shield' : 'cav', count: Math.round(40 * s), rate: 4 + k * 0.3, wait: 3 });
-  if (k >= 2) ev.push({ type: 'wave', enemy: 'archer', count: Math.round(20 * s), rate: 3, wait: 3 });
-  if (k % 2 === 1) ev.push({ type: 'gate', left: k % 4 === 1 ? 'x2' : `-${20 * k}`, right: k % 4 === 1 ? `-${20 * k}` : 'x2', shoot: 2, wait: 4 });
+  // enemies toughen every chunk so a snowballed army is still pressured
+  const hp = 1 + 0.3 * k + 0.03 * k * k;
+  ev.push({ type: 'wave', enemy: 'inf', count: Math.round(180 * s), rate: 8 + 2 * k, hp, wait: k === 0 ? 0 : 2, clear: k === 0 ? undefined : 120 + 20 * k });
+  if (k >= 1) ev.push({ type: 'wave', enemy: k % 2 ? 'shield' : 'cav', count: Math.round(40 * s), rate: 4 + k * 0.3, hp, wait: 3 });
+  if (k >= 2) ev.push({ type: 'wave', enemy: 'archer', count: Math.round(20 * s), rate: 3, hp, wait: 3 });
+  if (k % 2 === 1) {
+    // only the first gate multiplies; later gates are additive so growth stays linear
+    const good = k === 1 ? 'x2' : `+${40 + 20 * k}`;
+    const bad = `-${30 + 30 * k}`;
+    ev.push({ type: 'gate', left: k % 4 === 1 ? good : bad, right: k % 4 === 1 ? bad : good, shoot: 2, wait: 4 });
+  }
   if (k % 3 === 2) {
     const kinds = ['hammer', 'spear', 'fire', 'warlord'] as const;
-    ev.push({ type: 'boss', kind: kinds[Math.floor(k / 3) % 4], hp: Math.round(500 + 300 * k), wait: 4 });
+    ev.push({ type: 'boss', kind: kinds[Math.floor(k / 3) % 4], hp: Math.round((800 + 500 * k) * (1 + 0.15 * k)), wait: 4 });
   }
-  if (k >= 4 && k % 2 === 0) ev.push({ type: 'wave', enemy: 'ram', count: 2 + Math.floor(k / 4), rate: 0.3, wait: 4 });
-  if (k > 0 && k % 3 === 0) ev.push({ type: 'lane', side: 'R', lane: { panels: [`+${80 + 40 * k}`], wall: 400 + 150 * k, spacing: 3 }, wait: 0 });
+  if (k >= 4 && k % 2 === 0) ev.push({ type: 'wave', enemy: 'ram', count: 2 + Math.floor(k / 4), rate: 0.3, hp, wait: 4 });
+  if (k > 0 && k % 3 === 0) ev.push({ type: 'lane', side: 'R', lane: { panels: [`+${60 + 25 * k}`], count: 8, wall: 500 + 250 * k, spacing: 3 }, wait: 0 });
   return ev;
 }

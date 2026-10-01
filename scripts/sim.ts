@@ -21,7 +21,7 @@ for (const level of levels) {
     const t0 = performance.now();
     const bossLog: string[] = [];
     const spawnAt = new Map<number, [number, number]>();
-    while (w.state === 'play' && w.t < 400) {
+    while (w.state === 'play' && w.t < (level.endless ? 900 : 400)) {
       const d = bot.update(w, dt);
       w.setTarget(d.x);
       if (d.frost) w.castFrost();
